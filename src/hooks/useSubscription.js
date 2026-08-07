@@ -116,7 +116,39 @@ export function useSubscription() {
   }, []);
 
   useEffect(() => {
-    refresh({ soft: false });
+    let cancelled = false;
+    // Local-first: paint from cache ASAP; remote never blocks first frame
+    (async () => {
+      try {
+        const user = await getStoredUser();
+        if (cancelled) return;
+        if (!user?.phone) {
+          setSubscription({ active: false });
+          setDeviceAllowed(true);
+        } else if (user.subscriptionEnd) {
+          setSubscription({
+            active: computeLocalActive(user.subscriptionEnd),
+            subscriptionStart: user.subscriptionStart,
+            subscriptionEnd: user.subscriptionEnd,
+            planType: user.planType,
+            phone: user.phone,
+          });
+        } else {
+          setSubscription({ active: false, phone: user.phone });
+        }
+      } catch (err) {
+        if (!cancelled) setError(err?.message || 'Failed to load subscription');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+      if (!cancelled) {
+        // Soft remote refresh — must not flip loading / block Home
+        refresh({ soft: true });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
 
   // Recompute local expiry every 30s (and right when end time passes)

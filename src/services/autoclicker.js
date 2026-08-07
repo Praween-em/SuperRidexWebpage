@@ -23,6 +23,14 @@ export function getServiceStatus() {
   return AutoClickerModule?.getServiceStatus() ?? unavailable();
 }
 
+/** Native: Accept ON + a11y OFF → death alert (also registered without JS). */
+export function checkAccessibilityHealth() {
+  if (!AutoClickerModule?.checkAccessibilityHealth) {
+    return Promise.resolve({ acceptEnabled: false, accessibilityEnabled: false });
+  }
+  return AutoClickerModule.checkAccessibilityHealth();
+}
+
 /** No-op — min-fare filtering removed from the native engine. */
 export function setMinPrice() {
   return AutoClickerModule?.setMinPrice(0) ?? Promise.resolve(0);

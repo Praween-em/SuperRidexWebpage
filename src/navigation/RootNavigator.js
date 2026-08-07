@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,8 +14,6 @@ import MainTabs from './MainTabs';
 import { getStoredUser } from '../utils/storage';
 
 const Stack = createNativeStackNavigator();
-/** Short branded flash — long min time felt like lag on low-end phones. */
-const MIN_LOADING_MS = 600;
 
 function resolveInitialRoute(user) {
   if (!user?.phone) return 'Login';
@@ -24,12 +22,11 @@ function resolveInitialRoute(user) {
 
 export default function RootNavigator() {
   const [initialRoute, setInitialRoute] = useState(null);
-  const [minTimeDone, setMinTimeDone] = useState(false);
   const [splashHidden, setSplashHidden] = useState(false);
-  const bootStartedAt = useRef(Date.now());
 
   useEffect(() => {
     let cancelled = false;
+    // Local session only — never wait on network / native status before first route
     getStoredUser()
       .then((user) => {
         if (!cancelled) setInitialRoute(resolveInitialRoute(user));
@@ -37,45 +34,40 @@ export default function RootNavigator() {
       .catch(() => {
         if (!cancelled) setInitialRoute('Login');
       });
-    // Never block forever on AsyncStorage / slow flash storage
+    // Fast fallback on slow flash storage (was 800ms — felt like a black stall)
     const fallback = setTimeout(() => {
       if (!cancelled) setInitialRoute((r) => r || 'Login');
-    }, 800);
+    }, 350);
     return () => {
       cancelled = true;
       clearTimeout(fallback);
     };
   }, []);
 
-  // Brief branded loading UI, then enter app as soon as route is known
-  useEffect(() => {
-    const elapsed = Date.now() - bootStartedAt.current;
-    const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
-    const t = setTimeout(() => setMinTimeDone(true), remaining);
-    return () => clearTimeout(t);
-  }, []);
-
-  const hideNativeSplash = useCallback(async () => {
+  const hideNativeSplash = useCallback(() => {
     if (splashHidden) return;
+    setSplashHidden(true);
+    // Prefer sync hide — await hideAsync delayed first paint after swipe-kill
     try {
-      await SplashScreen.hideAsync();
+      if (typeof SplashScreen.hide === 'function') {
+        SplashScreen.hide();
+      } else {
+        SplashScreen.hideAsync().catch(() => {});
+      }
     } catch {
-      // ignore
-    } finally {
-      setSplashHidden(true);
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [splashHidden]);
 
-  // Hand off from native splash to our LoadingScreen quickly
+  // Hand off from native splash as soon as JS mounts (don't wait for route)
   useEffect(() => {
     hideNativeSplash();
-    const t = setTimeout(hideNativeSplash, 200);
+    const t = setTimeout(hideNativeSplash, 120);
     return () => clearTimeout(t);
   }, [hideNativeSplash]);
 
-  const showLoading = !initialRoute || !minTimeDone;
-
-  if (showLoading) {
+  // No artificial MIN_LOADING_MS — cold start after swipe-kill must not force a black flash
+  if (!initialRoute) {
     return (
       <SafeAreaProvider style={{ flex: 1, backgroundColor: '#000000' }}>
         <LoadingScreen onVisible={hideNativeSplash} onReady={hideNativeSplash} />

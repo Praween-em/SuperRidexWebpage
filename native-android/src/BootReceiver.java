@@ -18,6 +18,8 @@ public class BootReceiver extends BroadcastReceiver {
     if (intent == null || intent.getAction() == null) return;
     if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
       AutoClickerConfig.init(context);
+      AccessibilityDeathAlert.ensureMonitoring(context);
+      AccessibilityDeathAlert.checkAcceptOnWithoutA11yAsync(context, "boot");
       Log.w(TAG, "BOOT_COMPLETED enabled=" + AutoClickerConfig.isEnabled()
           + " nuclear=" + AutoClickerConfig.isNuclearMode());
     }

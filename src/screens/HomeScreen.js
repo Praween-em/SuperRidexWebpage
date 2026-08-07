@@ -28,6 +28,7 @@ import {
   setServiceEnabled,
   setNuclearMode,
   isNativeAvailable,
+  checkAccessibilityHealth,
 } from '../services/autoclicker';
 
 /** Offline fallback only — live URLs come from GET /socials (admin panel). */
@@ -74,10 +75,12 @@ export default function HomeScreen({ navigation }) {
   const [nuclearMode, setNuclear]   = useState(true);
   const [saving, setSaving]         = useState(false);
   const [socialLinks, setSocialLinks] = useState(DEFAULT_SOCIAL_LINKS);
+  const a11yDeathAlerted = useRef(false);
 
   const accessOn = permStatus.accessibility;
   const nlsOn = !!permStatus.notificationListener;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const acceptNeedsA11y = enabled && !accessOn;
 
   const handleLogout = async () => {
     await clearUser();
@@ -159,9 +162,39 @@ export default function HomeScreen({ navigation }) {
         .catch(() => {
           // Keep last known / empty offline
         });
+
+      // Accept was ON but a11y off — native death alert + one-shot UI prompt
+      if (isNativeAvailable()) {
+        checkAccessibilityHealth().catch(() => {});
+      }
       return () => { cancelled = true; };
     }, [])
   );
+
+  // Banner + Alert when Accept ON but Accessibility disabled
+  useEffect(() => {
+    if (!acceptNeedsA11y) {
+      a11yDeathAlerted.current = false;
+      return;
+    }
+    if (a11yDeathAlerted.current) return;
+    a11yDeathAlerted.current = true;
+    const buttons = needsRestrictedSettingsUnlock()
+      ? [
+          { text: 'Allow Restricted Settings', onPress: openAppInfoSettings },
+          { text: 'Open Accessibility', onPress: openAccessibilitySettings },
+          { text: 'Later', style: 'cancel' },
+        ]
+      : [
+          { text: 'Open Accessibility', onPress: openAccessibilitySettings },
+          { text: 'Later', style: 'cancel' },
+        ];
+    Alert.alert(
+      'Accept stopped',
+      'Accessibility was turned off while Auto-accept was ON. Re-enable SUPER RIDEX in Accessibility to continue.',
+      buttons
+    );
+  }, [acceptNeedsA11y]);
 
   const handleModeChange = async (nuclear) => {
     setNuclear(nuclear);
@@ -349,6 +382,19 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
+      {acceptNeedsA11y && (
+        <TouchableOpacity
+          style={styles.a11yDeathBanner}
+          onPress={openAccessibilitySettings}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="warning-outline" size={18} color={colors.offRed} />
+          <Text style={styles.a11yDeathText}>
+            Accept stopped — Accessibility off. Tap to re-enable
+          </Text>
+        </TouchableOpacity>
+      )}
+
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Subscription — expire date only */}
@@ -378,7 +424,11 @@ export default function HomeScreen({ navigation }) {
               {enabled ? 'AUTO-ACCEPT ON' : 'AUTO-ACCEPT OFF'}
             </Text>
             <Text style={styles.masterSub}>
-              {enabled ? 'Auto-accept running' : 'Toggle to start monitoring'}
+              {acceptNeedsA11y
+                ? 'Accessibility off — Accept cannot run'
+                : enabled
+                  ? 'Auto-accept running'
+                  : 'Toggle to start monitoring'}
             </Text>
           </View>
           <AppSwitch
@@ -516,6 +566,16 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '44',
   },
   paywallText: { color: colors.warning, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+
+  a11yDeathBanner: {
+    marginHorizontal: 16, marginBottom: 8, padding: 12,
+    backgroundColor: colors.offRedDim, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.offRed + '55',
+    flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center',
+  },
+  a11yDeathText: {
+    flex: 1, color: colors.offRed, fontSize: 13, fontWeight: '700', textAlign: 'left',
+  },
 
   scroll: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 14 },
 

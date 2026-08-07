@@ -17,6 +17,7 @@ const JAVA_FILES = [
   'AutoClickerPackage.java',
   'BootReceiver.java',
   'RideAlertListener.java',
+  'AccessibilityDeathAlert.java',
 ];
 
 const ACCESSIBILITY_XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -285,14 +286,39 @@ function patchMainApplication(platformRoot) {
   if (!mainAppPath) return;
 
   let contents = fs.readFileSync(mainAppPath, 'utf8');
-  if (contents.includes('AutoClickerPackage()')) return;
+  let changed = false;
 
-  contents = contents.replace(
-    /PackageList\(this\)\.packages\.apply\s*\{[^}]*\}/,
-    `PackageList(this).packages.apply {\n          add(AutoClickerPackage())\n        }`
-  );
-  fs.writeFileSync(mainAppPath, contents);
-  console.log(`[withAutoClicker] registered AutoClickerPackage in ${path.relative(platformRoot, mainAppPath)}`);
+  if (!contents.includes('AutoClickerPackage()')) {
+    const next = contents.replace(
+      /PackageList\(this\)\.packages\.apply\s*\{[^}]*\}/,
+      `PackageList(this).packages.apply {\n          add(AutoClickerPackage())\n        }`
+    );
+    if (next !== contents) {
+      contents = next;
+      changed = true;
+    }
+  }
+
+  // Native a11y death monitor at Application start (no JS required)
+  if (!contents.includes('AccessibilityDeathAlert.ensureMonitoring')) {
+    const next = contents.replace(
+      /override fun onCreate\(\) \{\r?\n(\s*)super\.onCreate\(\)/,
+      (match, indent) =>
+        `override fun onCreate() {\n${indent}super.onCreate()\n` +
+        `${indent}AutoClickerConfig.init(this)\n` +
+        `${indent}AccessibilityDeathAlert.ensureMonitoring(this)\n` +
+        `${indent}AccessibilityDeathAlert.checkAcceptOnWithoutA11yAsync(this, "app_create")`
+    );
+    if (next !== contents) {
+      contents = next;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    fs.writeFileSync(mainAppPath, contents);
+    console.log(`[withAutoClicker] patched ${path.relative(platformRoot, mainAppPath)}`);
+  }
 }
 
 function copyBrandIcons(projectRoot, platformRoot) {

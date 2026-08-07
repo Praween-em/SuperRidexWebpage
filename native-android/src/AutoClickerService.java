@@ -1608,6 +1608,7 @@ public class AutoClickerService extends AccessibilityService {
       setServiceInfo(info);
     }
     syncEngineForeground();
+    AccessibilityDeathAlert.onServiceConnected(this);
     // Full reset — never inherit burst/verify/overlay ghosts across a11y reconnect
     resetRaceEngine("connect");
     Log.i(TAG, "ENGINE_STARTED enabled=" + AutoClickerConfig.isEnabled()
@@ -1622,6 +1623,12 @@ public class AutoClickerService extends AccessibilityService {
 
   @Override
   public void onDestroy() {
+    // Accept was ON + a11y dying — alert even if JS was swipe-killed
+    try {
+      AccessibilityDeathAlert.onServiceDying(this, "destroy");
+    } catch (Throwable t) {
+      Log.e(TAG, "DEATH_ALERT_FAIL", t);
+    }
     resetRaceEngine("destroy");
     stopEngineForeground();
     if (sInstance == this) sInstance = null;
@@ -1630,7 +1637,12 @@ public class AutoClickerService extends AccessibilityService {
 
   @Override
   public void onInterrupt() {
-    // System interrupted a11y — must not leave STRIKING/VERIFY/overlay ghosts
+    // Interrupt is not always full death — alert only if Accept ON and a11y already off
+    try {
+      AccessibilityDeathAlert.checkAcceptOnWithoutA11y(this, "interrupt");
+    } catch (Throwable t) {
+      Log.e(TAG, "DEATH_ALERT_FAIL", t);
+    }
     try {
       resetRaceEngine("interrupt");
     } catch (Throwable t) {

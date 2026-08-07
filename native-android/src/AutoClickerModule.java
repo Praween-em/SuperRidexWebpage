@@ -8,8 +8,6 @@ import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.text.TextUtils;
-import android.view.accessibility.AccessibilityManager;
-import android.accessibilityservice.AccessibilityServiceInfo;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
@@ -21,7 +19,6 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class AutoClickerModule extends ReactContextBaseJavaModule {
@@ -36,6 +33,9 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
     super(context);
     reactContext = context;
     AutoClickerConfig.init(context);
+    // Native a11y death monitor — works without JS (swipe-kill / OEM kills)
+    AccessibilityDeathAlert.ensureMonitoring(context);
+    AccessibilityDeathAlert.checkAcceptOnWithoutA11yAsync(context, "module_init");
   }
 
   @Override
@@ -47,7 +47,9 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void isAccessibilityEnabled(Promise promise) {
-    promise.resolve(isOurAccessibilityServiceEnabled(getReactApplicationContext()));
+    promise.resolve(
+        AccessibilityDeathAlert.isOurAccessibilityServiceEnabled(getReactApplicationContext())
+    );
   }
 
   @ReactMethod
@@ -141,6 +143,9 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
     boolean prev = AutoClickerConfig.isEnabled();
     AutoClickerConfig.setEnabled(enabled);
     AutoClickerService.onConfigChanged();
+    if (!enabled) {
+      AccessibilityDeathAlert.cancelAlert(getReactApplicationContext());
+    }
     if (prev != enabled) {
       android.util.Log.i("AutoClickerModule", "setServiceEnabled " + prev + "→" + enabled);
     }
@@ -205,7 +210,10 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
     map.putBoolean("continuousForegroundTap", AutoClickerConfig.isContinuousForegroundTap());
     map.putInt("minPrice", AutoClickerConfig.getMinPrice());
     map.putInt("delayMs", AutoClickerConfig.getDelayMs());
-    map.putBoolean("accessibilityEnabled", isOurAccessibilityServiceEnabled(getReactApplicationContext()));
+    map.putBoolean(
+        "accessibilityEnabled",
+        AccessibilityDeathAlert.isOurAccessibilityServiceEnabled(getReactApplicationContext())
+    );
     map.putBoolean(
         "notificationListenerEnabled",
         isOurNotificationListenerEnabled(getReactApplicationContext())
@@ -216,6 +224,21 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
       pkgs.pushString(pkg);
     }
     map.putArray("monitoredPackages", pkgs);
+    promise.resolve(map);
+  }
+
+  /** JS can re-check Accept-ON + a11y-OFF and trigger the native death alert if needed. */
+  @ReactMethod
+  public void checkAccessibilityHealth(Promise promise) {
+    Context ctx = getReactApplicationContext();
+    AccessibilityDeathAlert.ensureMonitoring(ctx);
+    AccessibilityDeathAlert.checkAcceptOnWithoutA11y(ctx, "js_health");
+    WritableMap map = Arguments.createMap();
+    map.putBoolean("acceptEnabled", AutoClickerConfig.isEnabled());
+    map.putBoolean(
+        "accessibilityEnabled",
+        AccessibilityDeathAlert.isOurAccessibilityServiceEnabled(ctx)
+    );
     promise.resolve(map);
   }
 
@@ -246,30 +269,5 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
       }
     }
     return false;
-  }
-
-  private static boolean isOurAccessibilityServiceEnabled(Context context) {
-    AccessibilityManager am = (AccessibilityManager) context.getSystemService(Context.ACCESSIBILITY_SERVICE);
-    if (am == null) return false;
-
-    List<AccessibilityServiceInfo> services =
-        am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
-
-    String ourPackage = context.getPackageName();
-    for (AccessibilityServiceInfo info : services) {
-      if (info.getResolveInfo() != null
-          && info.getResolveInfo().serviceInfo != null
-          && ourPackage.equals(info.getResolveInfo().serviceInfo.packageName)
-          && AutoClickerService.class.getName().equals(info.getResolveInfo().serviceInfo.name)) {
-        return true;
-      }
-    }
-
-    // Fallback: check Settings.Secure string
-    String enabled = Settings.Secure.getString(
-        context.getContentResolver(),
-        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-    );
-    return enabled != null && enabled.contains(ourPackage);
   }
 }
