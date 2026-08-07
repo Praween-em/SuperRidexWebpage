@@ -34,6 +34,7 @@ public final class AutoClickerConfig {
    * Pref ignored; API always reports/stores false.
    */
   private static final AtomicBoolean continuousForegroundTap = new AtomicBoolean(false);
+  /** Removed — always 0. Kept only so old prefs / bridge calls stay harmless. */
   private static final AtomicInteger minPrice = new AtomicInteger(0);
   private static final AtomicInteger delayMs = new AtomicInteger(0);
   private static final AtomicInteger filterMode = new AtomicInteger(MODE_PRICE);
@@ -75,7 +76,7 @@ public final class AutoClickerConfig {
           .putBoolean("enabled", enabled.get())
           .putBoolean("nuclear_mode", nuclearMode.get())
           .putBoolean("continuous_fg_tap", false)
-          .putInt("min_price", minPrice.get())
+          .putInt("min_price", 0)
           .putInt("delay_ms", delayMs.get())
           .apply();
     }
@@ -105,13 +106,13 @@ public final class AutoClickerConfig {
     maxPickup.set(p.getFloat("max_pickup", 99f));
     maxDrop.set(p.getFloat("max_drop", 0f));
     continuousForegroundTap.set(false); // HARD OFF — ignore stale pref
-    minPrice.set(Math.max(0, p.getInt("min_price", 0)));
+    minPrice.set(0); // min-fare feature removed
     nuclearMode.set(p.getBoolean("nuclear_mode", true));
     enabled.set(p.getBoolean("enabled", false));
     delayMs.set(Math.max(0, p.getInt("delay_ms", 0)));
   }
 
-  /** Ensure prefs loaded before any enable/min check (safe from NLS binder thread). */
+  /** Ensure prefs loaded before any enable check (safe from NLS binder thread). */
   public static void ensureInit(Context context) {
     if (prefs != null) return;
     if (context != null) {
@@ -139,22 +140,31 @@ public final class AutoClickerConfig {
   private static volatile long lastDiskSyncUptimeMs = 0L;
 
   /**
-   * Re-read enabled/min/nuclear from disk. Fixes ColorOS process reuse where
+   * Re-read enabled/nuclear from disk. Fixes ColorOS process reuse where
    * in-memory AtomicBooleans stay false after prefs were updated (JS / adb).
    * Throttled — a11y hot path calls isEnabled() extremely often.
    */
   private static void syncCriticalFromDisk() {
+    syncCriticalFromDisk(false);
+  }
+
+  /** Unthrottled sync — call from a11y/NLS onServiceConnected / onListenerConnected. */
+  public static void forceSyncCriticalFromDisk() {
+    syncCriticalFromDisk(true);
+  }
+
+  private static void syncCriticalFromDisk(boolean force) {
     if (prefs == null && appContext != null) {
       init(appContext);
     }
     SharedPreferences p = prefs;
     if (p == null) return;
     long now = android.os.SystemClock.uptimeMillis();
-    if (now - lastDiskSyncUptimeMs < 400L) return;
+    if (!force && now - lastDiskSyncUptimeMs < 400L) return;
     lastDiskSyncUptimeMs = now;
     enabled.set(p.getBoolean("enabled", false));
     nuclearMode.set(p.getBoolean("nuclear_mode", true));
-    minPrice.set(Math.max(0, p.getInt("min_price", 0)));
+    minPrice.set(0); // min-fare feature removed
     delayMs.set(Math.max(0, p.getInt("delay_ms", 0)));
   }
 
@@ -180,16 +190,16 @@ public final class AutoClickerConfig {
     if (p != null) p.edit().putBoolean("continuous_fg_tap", false).apply();
   }
 
+  /** Always 0 — min-fare filtering removed from the race engine. */
   public static int getMinPrice() {
-    syncCriticalFromDisk();
-    return minPrice.get();
+    return 0;
   }
 
+  /** No-op — kept so older JS / bridge callers do not crash. */
   public static void setMinPrice(int value) {
-    int v = Math.max(0, value);
-    minPrice.set(v);
+    minPrice.set(0);
     SharedPreferences p = prefs;
-    if (p != null) p.edit().putInt("min_price", v).commit();
+    if (p != null) p.edit().putInt("min_price", 0).apply();
   }
 
   public static int getDelayMs() {
@@ -256,6 +266,22 @@ public final class AutoClickerConfig {
         || packageName.equals("com.olacabs.driver")
         || packageName.contains("oladriver")
         || packageName.contains("olacabs");
+  }
+
+  public static boolean isUberPackage(String packageName) {
+    if (packageName == null) return false;
+    return packageName.equals("com.ubercab.driver")
+        || packageName.equals("com.ubercab.driver.debug")
+        || packageName.startsWith("com.ubercab.driver");
+  }
+
+  /** Rapido / Ola / Uber / RideAndhra — any monitored ride app. */
+  public static boolean isRideAppPackage(String packageName) {
+    if (packageName == null) return false;
+    return isRapidoPackage(packageName)
+        || isOlaPackage(packageName)
+        || isUberPackage(packageName)
+        || packageName.contains("rideandhra");
   }
 
   public static void setMonitoredPackages(Set<String> packages) {

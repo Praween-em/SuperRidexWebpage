@@ -24,9 +24,9 @@ public class RideAlertListener extends NotificationListenerService {
   public void onListenerConnected() {
     super.onListenerConnected();
     AutoClickerConfig.init(this);
+    AutoClickerConfig.forceSyncCriticalFromDisk();
     Log.i(TAG, "NLS_CONNECTED enabled=" + AutoClickerConfig.isEnabled()
-        + " nuclear=" + AutoClickerConfig.isNuclearMode()
-        + " min=" + AutoClickerConfig.getMinPrice());
+        + " nuclear=" + AutoClickerConfig.isNuclearMode());
   }
 
   @Override

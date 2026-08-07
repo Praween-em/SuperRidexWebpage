@@ -11,6 +11,7 @@ import {
   openAccessibilitySettings,
   openAppInfoSettings,
   openOverlaySettings,
+  openNotificationListenerSettings,
   requestBatteryOptimizationExemption,
   needsRestrictedSettingsUnlock,
 } from '../services/permissions';
@@ -29,8 +30,20 @@ const STEPS = [
     accentGlow: colors.purpleGlow,
   },
   {
-    id: 'overlay',
+    id: 'notificationListener',
     num: '02',
+    title: 'Notification Access',
+    description: 'Required on almost all phones. Arms the Accept race the instant a ride alert arrives — without this, many OEMs never click.',
+    instruction: 'Settings → Apps → Special app access → Notification access → SUPER RIDEX → Allow',
+    action: openNotificationListenerSettings,
+    actionLabel: 'Open Notification Access',
+    accentColor: colors.blue,
+    accentBorder: colors.borderBlue,
+    accentGlow: colors.blueGlow,
+  },
+  {
+    id: 'overlay',
+    num: '03',
     title: 'Display Over Other Apps',
     description: 'Shows a floating status indicator while you\'re inside driver apps confirming auto-clicker is running.',
     instruction: 'Settings → Apps → SUPER RIDEX → Display over other apps → Allow',
@@ -42,10 +55,10 @@ const STEPS = [
   },
   {
     id: 'battery',
-    num: '03',
+    num: '04',
     title: 'Battery Optimization Exemption',
-    description: 'Prevents Android from killing the service. Without this, auto-accept stops when the screen turns off.',
-    instruction: 'Tap the button below — select "Don\'t optimize" in the system dialog.',
+    description: 'Critical on Realme, Redmi, Vivo, Oppo: without this, Accept works for 1–3 rides or dies overnight. Also turn ON Autostart / allow background activity.',
+    instruction: '1) Tap below → Unrestricted / Don\'t optimize. 2) App info → Battery → Unrestricted. 3) Autostart ON (phone settings). Without Autostart, next-day Accept often fails.',
     action: requestBatteryOptimizationExemption,
     actionLabel: 'Request Battery Exemption',
     accentColor: colors.purple,
@@ -56,7 +69,7 @@ const STEPS = [
 
 export default function PermissionsSetupScreen({ navigation }) {
   const { status, check } = usePermissions();
-  const allDone = status.accessibility && status.overlay && status.battery;
+  const allDone = status.accessibility && status.notificationListener && status.overlay && status.battery;
 
   return (
     <Screen>
@@ -68,7 +81,7 @@ export default function PermissionsSetupScreen({ navigation }) {
         </View>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>Setup Required</Text>
-          <Text style={styles.headerSub}>Grant 3 permissions to enable auto-accept</Text>
+          <Text style={styles.headerSub}>Grant all 4 permissions — needed on every phone brand</Text>
         </View>
       </View>
 
@@ -195,7 +208,7 @@ export default function PermissionsSetupScreen({ navigation }) {
           activeOpacity={0.85}
         >
           <Text style={[styles.continueBtnText, !allDone && { color: colors.icyMuted }]}>
-            {allDone ? 'All Set — Open Home' : 'Continue to Home (permissions optional)'}
+            {allDone ? 'All Set — Open Home' : 'Continue anyway (auto-accept may miss rides)'}
           </Text>
         </TouchableOpacity>
 

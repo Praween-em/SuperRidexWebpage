@@ -4,6 +4,8 @@
  * expose isActive flag and expiry details (includes device entitlement).
  * Recomputes local expiry on a timer and refreshes when app returns to foreground
  * so auto-accept can be forced off the moment a plan ends.
+ *
+ * Local storage paints first; remote refresh is soft (no full-screen reload).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -23,77 +25,98 @@ export function useSubscription() {
   const [deviceAllowed, setDeviceAllowed] = useState(true);
   const [nowTick, setNowTick] = useState(Date.now());
   const appStateRef = useRef(AppState.currentState);
+  const refreshInflight = useRef(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async ({ soft = false } = {}) => {
+    // Soft refreshes (foreground / interval) must not flip loading=true —
+    // that blocked Home controls and felt like lag on slow networks.
+    if (!soft) setLoading(true);
     setError(null);
-    try {
-      const user = await getStoredUser();
-      if (!user?.phone) {
-        setSubscription({ active: false });
-        setDeviceAllowed(true);
-        return;
-      }
 
-      if (user.subscriptionEnd) {
-        const isLocallyActive = computeLocalActive(user.subscriptionEnd);
-        setSubscription({
-          active: isLocallyActive,
-          subscriptionStart: user.subscriptionStart,
-          subscriptionEnd: user.subscriptionEnd,
-          planType: user.planType,
-          phone: user.phone,
-        });
-      } else {
-        setSubscription({ active: false, phone: user.phone });
-      }
-
+    const run = async () => {
       try {
-        const remote = await getSubscriptionStatus(user.phone);
-        const updated = {
-          active: !!remote.active,
-          subscriptionStart: remote.subscriptionStart,
-          subscriptionEnd: remote.subscriptionEnd,
-          planType: remote.planType,
-          phone: user.phone,
-        };
-        setSubscription(updated);
-        setDeviceAllowed(remote.deviceAllowed !== false);
-        await saveUser({ ...user, ...updated });
-      } catch (err) {
-        if (err instanceof ApiError && err.code === 'DEVICE_LIMIT') {
-          setDeviceAllowed(false);
-          setSubscription((prev) => ({
-            ...(prev || {}),
-            active: false,
-            phone: user.phone,
-            deviceBlocked: true,
-          }));
-          setError(err.message);
-        } else if (!user.subscriptionEnd) {
-          setSubscription({ active: false, phone: user.phone });
-        } else {
-          // Offline: keep local expiry as source of truth
-          setSubscription((prev) => ({
-            ...(prev || {}),
-            active: computeLocalActive(user.subscriptionEnd),
-            subscriptionEnd: user.subscriptionEnd,
+        const user = await getStoredUser();
+        if (!user?.phone) {
+          setSubscription({ active: false });
+          setDeviceAllowed(true);
+          return;
+        }
+
+        if (user.subscriptionEnd) {
+          const isLocallyActive = computeLocalActive(user.subscriptionEnd);
+          setSubscription({
+            active: isLocallyActive,
             subscriptionStart: user.subscriptionStart,
+            subscriptionEnd: user.subscriptionEnd,
             planType: user.planType,
             phone: user.phone,
-          }));
+          });
+        } else {
+          setSubscription({ active: false, phone: user.phone });
         }
+
+        // Initial paint can finish as soon as local data is applied
+        if (!soft) {
+          setLoading(false);
+        }
+
+        try {
+          const remote = await getSubscriptionStatus(user.phone);
+          const updated = {
+            active: !!remote.active,
+            subscriptionStart: remote.subscriptionStart,
+            subscriptionEnd: remote.subscriptionEnd,
+            planType: remote.planType,
+            phone: user.phone,
+          };
+          setSubscription(updated);
+          setDeviceAllowed(remote.deviceAllowed !== false);
+          await saveUser({ ...user, ...updated });
+        } catch (err) {
+          if (err instanceof ApiError && err.code === 'DEVICE_LIMIT') {
+            setDeviceAllowed(false);
+            setSubscription((prev) => ({
+              ...(prev || {}),
+              active: false,
+              phone: user.phone,
+              deviceBlocked: true,
+            }));
+            setError(err.message);
+          } else if (!user.subscriptionEnd) {
+            setSubscription({ active: false, phone: user.phone });
+          } else {
+            // Offline / timeout: keep local expiry as source of truth
+            setSubscription((prev) => ({
+              ...(prev || {}),
+              active: computeLocalActive(user.subscriptionEnd),
+              subscriptionEnd: user.subscriptionEnd,
+              subscriptionStart: user.subscriptionStart,
+              planType: user.planType,
+              phone: user.phone,
+            }));
+          }
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+        setNowTick(Date.now());
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-      setNowTick(Date.now());
+    };
+
+    // Coalesce parallel soft refreshes; hard refresh always re-runs after wait
+    if (refreshInflight.current) {
+      await refreshInflight.current;
+      if (soft) return;
     }
+    refreshInflight.current = run().finally(() => {
+      refreshInflight.current = null;
+    });
+    await refreshInflight.current;
   }, []);
 
   useEffect(() => {
-    refresh();
+    refresh({ soft: false });
   }, [refresh]);
 
   // Recompute local expiry every 30s (and right when end time passes)
@@ -119,13 +142,13 @@ export function useSubscription() {
     };
   }, [subscription?.subscriptionEnd]);
 
-  // Refresh subscription when app comes back to foreground
+  // Soft refresh when app returns to foreground
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       const prev = appStateRef.current;
       appStateRef.current = next;
       if (prev.match(/inactive|background/) && next === 'active') {
-        refresh();
+        refresh({ soft: true });
       }
     });
     return () => sub.remove();
@@ -134,7 +157,7 @@ export function useSubscription() {
   // Soft remote refresh every 5 minutes while mounted
   useEffect(() => {
     const id = setInterval(() => {
-      refresh();
+      refresh({ soft: true });
     }, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [refresh]);
@@ -163,7 +186,7 @@ export function useSubscription() {
     subscription,
     loading,
     error,
-    refresh,
+    refresh: () => refresh({ soft: false }),
     isActive,
     deviceAllowed,
     daysRemaining,

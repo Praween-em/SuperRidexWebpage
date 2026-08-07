@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, StatusBar } from 'react-native';
 
 /**
- * Launch frame shown for at least 2 seconds on cold start.
- * Uses assets/splash-blank.png as the branded splash image.
+ * Launch frame on cold start — light JPEG so low-end devices decode quickly.
  */
 export default function LoadingScreen({ onVisible, onReady }) {
   const sent = useRef(false);
@@ -27,9 +26,10 @@ export default function LoadingScreen({ onVisible, onReady }) {
     >
       <StatusBar barStyle="light-content" backgroundColor="#000000" translucent={false} />
       <Image
-        source={require('../../assets/splash-blank.png')}
+        source={require('../../assets/splash-blank.jpg')}
         style={styles.splash}
         resizeMode="contain"
+        fadeDuration={0}
         accessibilityLabel="SUPER RIDEX"
       />
     </View>

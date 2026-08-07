@@ -19,7 +19,6 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import java.util.HashSet;
 import java.util.List;
@@ -153,10 +152,11 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
     promise.resolve(AutoClickerConfig.isEnabled());
   }
 
+  /** No-op — min-fare filtering removed; always reports 0. */
   @ReactMethod
   public void setMinPrice(int price, Promise promise) {
-    AutoClickerConfig.setMinPrice(price);
-    promise.resolve(price);
+    AutoClickerConfig.setMinPrice(0);
+    promise.resolve(0);
   }
 
   @ReactMethod
@@ -219,43 +219,12 @@ public class AutoClickerModule extends ReactContextBaseJavaModule {
     promise.resolve(map);
   }
 
-  // Required for NativeEventEmitter
+  // Required for NativeEventEmitter (no ride-history events emitted)
   @ReactMethod
   public void addListener(String eventName) {}
 
   @ReactMethod
   public void removeListeners(double count) {}
-
-  // ─── Event emission ───────────────────────────────────────────────────────
-
-  static void emitRideAccepted(String packageName, int price, String label) {
-    emitRideAccepted(packageName, price, label, -1, "Standard");
-  }
-
-  static void emitRideAccepted(
-      String packageName,
-      int price,
-      String label,
-      int latencyMs,
-      String mode
-  ) {
-    if (reactContext == null || !reactContext.hasActiveReactInstance()) {
-      android.util.Log.w("AutoClickerModule", "emitRideAccepted dropped — no React context");
-      return;
-    }
-
-    WritableMap params = Arguments.createMap();
-    params.putString("packageName", packageName);
-    params.putInt("price", price);
-    params.putString("label", label != null ? label : "");
-    params.putInt("latencyMs", latencyMs);
-    params.putString("mode", mode != null ? mode : "Standard");
-    params.putDouble("timestamp", System.currentTimeMillis());
-
-    reactContext
-        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-        .emit("onRideAccepted", params);
-  }
 
   private static boolean isOurNotificationListenerEnabled(Context context) {
     String flat = Settings.Secure.getString(

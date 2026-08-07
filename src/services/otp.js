@@ -7,6 +7,8 @@
  * Requires EXPO_PUBLIC_MSG91_WIDGET_ID + EXPO_PUBLIC_MSG91_AUTH_TOKEN
  * Enable "Mobile Integration" on the MSG91 widget in the dashboard.
  *
+ * Channel codes (retryOTP): SMS=11, VOICE=4, WHATSAPP=12, EMAIL=3
+ *
  * MSG91 response shapes (from SDK types):
  *   sendOTP success  → { type: 'success', message: '<reqId>' }
  *   verifyOTP success → { type: 'success', 'access-token': '<jwt>' }
@@ -17,6 +19,14 @@ import { OTPWidget } from '@msg91comm/sendotp-react-native';
 
 const WIDGET_ID = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID || '';
 const AUTH_TOKEN = process.env.EXPO_PUBLIC_MSG91_AUTH_TOKEN || '';
+
+/** MSG91 retry channel codes */
+export const OTP_CHANNEL = {
+  SMS: 11,
+  VOICE: 4,
+  WHATSAPP: 12,
+  EMAIL: 3,
+};
 
 let initialized = false;
 
@@ -35,12 +45,24 @@ export function initOtpWidget() {
   return true;
 }
 
+/**
+ * Normalize to Indian mobile 10 digits starting 6–9.
+ * Rejects landlines / bad series that MSG91 + carriers often block.
+ */
+export function normalizeIndianMobile10(phoneInput) {
+  let digits = String(phoneInput || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(-10);
+  if (!/^[6-9]\d{9}$/.test(digits)) return null;
+  return digits;
+}
+
 /** India mobile → identifier without + (e.g. 919876543210) */
 export function toOtpIdentifier(phone10) {
-  const digits = String(phone10 || '').replace(/\D/g, '');
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.startsWith('91') && digits.length === 12) return digits;
-  return digits;
+  const ten = normalizeIndianMobile10(phone10);
+  if (!ten) return String(phone10 || '').replace(/\D/g, '');
+  return `91${ten}`;
 }
 
 function looksLikeJwt(value) {
@@ -111,15 +133,80 @@ function errorMessage(response, fallback) {
   return fallback;
 }
 
+/** Map MSG91 / carrier errors into actionable user text. */
+function friendlyOtpError(raw, fallback) {
+  const msg = String(raw || fallback || 'Failed to send OTP');
+  const lower = msg.toLowerCase();
+
+  if (/dlt|template|sender.?id| entiti/i.test(lower)) {
+    return 'SMS blocked by telecom (DLT). Contact support — template/sender ID may need approval.';
+  }
+  if (/blocked|blacklist|not allowed|restricted|denied/i.test(lower)) {
+    return 'This number or carrier is blocked from OTP right now. Try Voice OTP, WhatsApp, or another SIM.';
+  }
+  if (/invalid.*(mobile|phone|number|identifier)/i.test(lower)) {
+    return 'Enter a valid Indian mobile number (10 digits starting with 6–9).';
+  }
+  if (/limit|quota|exceed|balance|credit|insufficient/i.test(lower)) {
+    return 'OTP SMS limit reached for today. Try Voice OTP or try again later.';
+  }
+  if (/network|timeout|timed out|fetch|internet|failed to connect/i.test(lower)) {
+    return 'Network error sending OTP. Turn on mobile data (not only Wi‑Fi) and try again — some carriers need data for verification.';
+  }
+  if (/invisible|silent|sna|carrier/i.test(lower)) {
+    return 'Carrier silent verification failed. Tap Resend SMS or try Voice OTP.';
+  }
+  return msg;
+}
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out. Check your signal and try again.`)),
+      ms
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Best-effort force SMS after send — helps when Invisible OTP "succeeds"
+ * on Wi‑Fi / unsupported carriers but SMS never arrives.
+ */
+async function forceSmsFallback(reqId) {
+  if (!reqId) return;
+  try {
+    await withTimeout(
+      OTPWidget.retryOTP({ reqId, retryChannel: OTP_CHANNEL.SMS }),
+      15000,
+      'SMS fallback'
+    );
+  } catch {
+    // Ignore — primary send may already have queued SMS
+  }
+}
+
 export async function sendOtp(phone10) {
   if (!initOtpWidget()) {
     throw new Error('OTP is not configured. Add MSG91 widget ID and auth token.');
   }
-  const identifier = toOtpIdentifier(phone10);
-  if (identifier.length < 12) {
-    throw new Error('Enter a valid 10-digit mobile number');
+  const ten = normalizeIndianMobile10(phone10);
+  if (!ten) {
+    throw new Error('Enter a valid 10-digit Indian mobile number (starts with 6–9)');
   }
-  const response = await OTPWidget.sendOTP({ identifier });
+  const identifier = `91${ten}`;
+
+  let response;
+  try {
+    response = await withTimeout(
+      OTPWidget.sendOTP({ identifier }),
+      20000,
+      'Sending OTP'
+    );
+  } catch (err) {
+    throw new Error(friendlyOtpError(err?.message, 'Failed to send OTP'));
+  }
   if (__DEV__) {
     console.log('[otp] sendOTP type=', response?.type, 'messageLen=', String(response?.message || '').length);
   }
@@ -131,27 +218,42 @@ export async function sendOtp(phone10) {
   }
 
   if (!isSuccess(response)) {
-    throw new Error(errorMessage(response, 'Failed to send OTP'));
+    throw new Error(friendlyOtpError(errorMessage(response, 'Failed to send OTP')));
   }
   const reqId = extractReqId(response);
   if (!reqId) {
     throw new Error('OTP sent but request id missing. Check MSG91 widget config.');
   }
+
+  // Force SMS path so Airtel/Vi/BSNL (and Wi‑Fi-only) still get a text
+  // when Silent Network Auth does nothing useful.
+  await forceSmsFallback(reqId);
+
   return { reqId, accessToken: null, response, alreadyVerified: false };
 }
 
-export async function retryOtp(reqId, retryChannel) {
+/**
+ * @param {string} reqId
+ * @param {number} [retryChannel] — OTP_CHANNEL.SMS | VOICE | WHATSAPP
+ */
+export async function retryOtp(reqId, retryChannel = OTP_CHANNEL.SMS) {
   if (!initOtpWidget()) {
     throw new Error('OTP is not configured');
   }
   if (!reqId) throw new Error('Missing OTP request id');
   const body = { reqId };
   if (retryChannel != null) body.retryChannel = retryChannel;
-  const response = await OTPWidget.retryOTP(body);
-  if (!isSuccess(response)) {
-    throw new Error(errorMessage(response, 'Failed to resend OTP'));
+
+  let response;
+  try {
+    response = await withTimeout(OTPWidget.retryOTP(body), 20000, 'Resending OTP');
+  } catch (err) {
+    throw new Error(friendlyOtpError(err?.message, 'Failed to resend OTP'));
   }
-  return { reqId: extractReqId(response) || reqId, response };
+  if (!isSuccess(response)) {
+    throw new Error(friendlyOtpError(errorMessage(response, 'Failed to resend OTP')));
+  }
+  return { reqId: extractReqId(response) || reqId, response, channel: retryChannel };
 }
 
 export async function verifyOtp(reqId, otp) {
@@ -162,13 +264,22 @@ export async function verifyOtp(reqId, otp) {
   const code = String(otp || '').trim();
   if (code.length < 4) throw new Error('Enter the OTP you received');
 
-  const response = await OTPWidget.verifyOTP({ reqId, otp: code });
+  let response;
+  try {
+    response = await withTimeout(
+      OTPWidget.verifyOTP({ reqId, otp: code }),
+      20000,
+      'Verifying OTP'
+    );
+  } catch (err) {
+    throw new Error(friendlyOtpError(err?.message, 'Invalid OTP'));
+  }
   if (__DEV__) {
     console.log('[otp] verifyOTP raw:', JSON.stringify(response));
   }
 
   if (!isSuccess(response)) {
-    throw new Error(errorMessage(response, 'Invalid OTP'));
+    throw new Error(friendlyOtpError(errorMessage(response, 'Invalid OTP')));
   }
 
   const accessToken = extractAccessToken(response);

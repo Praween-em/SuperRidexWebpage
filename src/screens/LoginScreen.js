@@ -9,7 +9,7 @@ import { colors } from '../theme/colors';
 import { saveUser } from '../utils/storage';
 import { replaceRoot } from '../navigation/rootNavigation';
 import { verifyOtpWithServer } from '../services/api';
-import { initOtpWidget, isOtpConfigured, sendOtp, retryOtp, verifyOtp } from '../services/otp';
+import { initOtpWidget, isOtpConfigured, sendOtp, retryOtp, verifyOtp, OTP_CHANNEL } from '../services/otp';
 
 /** Pure black — readable on light fills even if the OS is in dark mode. */
 const INPUT_TEXT = '#000000';
@@ -49,22 +49,31 @@ export default function LoginScreen({ navigation }) {
       setOtp('');
       setStep('otp');
     } catch (err) {
-      Alert.alert('Could not send OTP', err.message || 'Try again');
+      Alert.alert(
+        'Could not send OTP',
+        err.message || 'SMS could not be sent. Check internet, try again, or wait a minute if you hit the daily SMS limit.'
+      );
     } finally {
       setSending(false);
     }
   };
 
-  const handleResendOtp = async () => {
+  const handleResendOtp = async (channel = OTP_CHANNEL.SMS) => {
     if (!reqId) {
       await handleSendOtp();
       return;
     }
     setResending(true);
     try {
-      const { reqId: id } = await retryOtp(reqId);
+      const { reqId: id } = await retryOtp(reqId, channel);
       setReqId(id);
-      Alert.alert('OTP resent', 'Check your SMS for a new code.');
+      const via =
+        channel === OTP_CHANNEL.VOICE
+          ? 'You should get a phone call with the code.'
+          : channel === OTP_CHANNEL.WHATSAPP
+            ? 'Check WhatsApp for the new code.'
+            : 'Check your SMS for a new code. If Wi‑Fi only, turn on mobile data once.';
+      Alert.alert('OTP resent', via);
     } catch (err) {
       Alert.alert('Resend failed', err.message || 'Try again');
     } finally {
@@ -241,12 +250,34 @@ export default function LoginScreen({ navigation }) {
 
                 <TouchableOpacity
                   style={styles.resendRow}
-                  onPress={handleResendOtp}
+                  onPress={() => handleResendOtp(OTP_CHANNEL.SMS)}
                   disabled={busy}
                 >
                   <Text style={styles.cardSub}>Didn&apos;t receive?  </Text>
-                  <Text style={styles.link}>{resending ? 'Sending…' : 'Resend OTP'}</Text>
+                  <Text style={styles.link}>{resending ? 'Sending…' : 'Resend SMS'}</Text>
                 </TouchableOpacity>
+
+                <View style={styles.altChannels}>
+                  <TouchableOpacity
+                    onPress={() => handleResendOtp(OTP_CHANNEL.VOICE)}
+                    disabled={busy}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.link}>Call me (Voice OTP)</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.cardSub}> · </Text>
+                  <TouchableOpacity
+                    onPress={() => handleResendOtp(OTP_CHANNEL.WHATSAPP)}
+                    disabled={busy}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.link}>WhatsApp OTP</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.carrierHint}>
+                  Some carriers block silent verification on Wi‑Fi. Use mobile data, or try Voice / WhatsApp above.
+                </Text>
               </>
             )}
           </View>
@@ -351,6 +382,19 @@ const styles = StyleSheet.create({
   btnText: { color: colors.white, fontSize: 16, fontWeight: '700' },
 
   resendRow: { flexDirection: 'row', justifyContent: 'center' },
+  altChannels: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+  },
+  carrierHint: {
+    fontSize: 11,
+    color: colors.icyMuted,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   link: { color: colors.purpleBright, fontSize: 13, fontWeight: '600' },
   terms: { textAlign: 'center', color: colors.icyMuted, fontSize: 12, marginBottom: 8, lineHeight: 18 },
   termsLink: { color: colors.purpleBright, fontWeight: '700' },

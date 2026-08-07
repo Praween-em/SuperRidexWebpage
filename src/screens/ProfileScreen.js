@@ -6,7 +6,7 @@ import {
 import Screen from '../components/Screen';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { navigateRoot, replaceRoot } from '../navigation/rootNavigation';
+import { replaceRoot } from '../navigation/rootNavigation';
 import { getStoredUser, clearUser } from '../utils/storage';
 import { useSubscription } from '../hooks/useSubscription';
 import { useReferral } from '../hooks/useReferral';
@@ -34,9 +34,12 @@ export default function ProfileScreen({ navigation }) {
   }, []);
 
   const handleCopyCode = async () => {
-    const message = `Join SUPER RIDEX! Use my referral code ${referralCode} when you sign up. Auto-accept rides faster!`;
+    const apkUrl = 'https://www.superridex.in/downloads/superridex.apk';
+    const message =
+      `Join SUPER RIDEX! Use my referral code ${referralCode} when you sign up.\n`
+      + `Download the app: ${apkUrl}`;
     try {
-      await Share.share({ message });
+      await Share.share({ message, url: apkUrl });
     } catch {
       Alert.alert('Your Referral Code', referralCode);
     }
@@ -92,21 +95,6 @@ export default function ProfileScreen({ navigation }) {
               </Text>
             </View>
           ))}
-        </View>
-
-        <View style={styles.quickRow}>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => navigation.navigate('SettingsTab')}>
-            <Ionicons name="settings-outline" size={22} color={colors.purpleBright} />
-            <Text style={styles.quickBtnText}>Settings</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => navigateRoot(navigation, 'Plans')}>
-            <Ionicons name="card-outline" size={22} color={colors.purpleBright} />
-            <Text style={styles.quickBtnText}>Renew</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => navigateRoot(navigation, 'PermissionsSetup')}>
-            <Ionicons name="shield-checkmark-outline" size={22} color={colors.purpleBright} />
-            <Text style={styles.quickBtnText}>Permissions</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Referral Program */}
@@ -208,14 +196,6 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   detailLabel: { fontSize: 14, color: colors.icyDim },
   detailValue: { fontSize: 14, fontWeight: '700', color: colors.icy },
-
-  quickRow: { flexDirection: 'row', gap: 10 },
-  quickBtn: {
-    flex: 1, alignItems: 'center', gap: 6, paddingVertical: 16,
-    backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
-  },
-  quickBtnIcon: { fontSize: 22 },
-  quickBtnText: { fontSize: 12, fontWeight: '600', color: colors.icyDim },
 
   referralHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sectionBar: { width: 4, height: 20, borderRadius: 2 },

@@ -19,8 +19,7 @@ public class BootReceiver extends BroadcastReceiver {
     if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
       AutoClickerConfig.init(context);
       Log.w(TAG, "BOOT_COMPLETED enabled=" + AutoClickerConfig.isEnabled()
-          + " nuclear=" + AutoClickerConfig.isNuclearMode()
-          + " minPrice=" + AutoClickerConfig.getMinPrice());
+          + " nuclear=" + AutoClickerConfig.isNuclearMode());
     }
   }
 }

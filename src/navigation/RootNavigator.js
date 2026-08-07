@@ -14,7 +14,8 @@ import MainTabs from './MainTabs';
 import { getStoredUser } from '../utils/storage';
 
 const Stack = createNativeStackNavigator();
-const MIN_LOADING_MS = 2000;
+/** Short branded flash — long min time felt like lag on low-end phones. */
+const MIN_LOADING_MS = 600;
 
 function resolveInitialRoute(user) {
   if (!user?.phone) return 'Login';
@@ -46,7 +47,7 @@ export default function RootNavigator() {
     };
   }, []);
 
-  // Keep branded loading UI visible for at least 2 seconds
+  // Brief branded loading UI, then enter app as soon as route is known
   useEffect(() => {
     const elapsed = Date.now() - bootStartedAt.current;
     const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
@@ -90,7 +91,7 @@ export default function RootNavigator() {
           screenOptions={{
             headerShown: false,
             animation: 'fade',
-            animationDuration: 150,
+            animationDuration: 100,
           }}
         >
           <Stack.Screen name="Login" component={LoginScreen} />

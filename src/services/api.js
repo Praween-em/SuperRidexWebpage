@@ -20,6 +20,8 @@ function resolveBaseUrl() {
 }
 
 const BASE_URL = resolveBaseUrl();
+/** Abort hung requests so Home/Plans/Login never spin forever on bad networks. */
+const REQUEST_TIMEOUT_MS = 12000;
 
 if (__DEV__) {
   console.log('[api] BASE_URL =', BASE_URL);
@@ -67,18 +69,35 @@ async function request(method, path, body, token) {
     console.log(`[api] ${method} ${url}`);
   }
 
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller
+    ? setTimeout(() => {
+        try {
+          controller.abort();
+        } catch {
+          // ignore
+        }
+      }, REQUEST_TIMEOUT_MS)
+    : null;
+
   let res;
   try {
     res = await fetch(url, {
       method,
       headers,
       body: payload ? JSON.stringify(payload) : undefined,
+      signal: controller?.signal,
     });
   } catch (err) {
+    const aborted = err?.name === 'AbortError' || controller?.signal?.aborted;
     throw new ApiError(
-      `Cannot reach backend (${BASE_URL}). Check EXPO_PUBLIC_API_URL and rebuild the app.`,
-      { status: 0, code: 'NETWORK', data: { cause: err?.message } }
+      aborted
+        ? 'Request timed out. Check your internet and try again.'
+        : `Cannot reach backend (${BASE_URL}). Check EXPO_PUBLIC_API_URL and rebuild the app.`,
+      { status: 0, code: aborted ? 'TIMEOUT' : 'NETWORK', data: { cause: err?.message } }
     );
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 
   const data = await res.json().catch(() => ({}));

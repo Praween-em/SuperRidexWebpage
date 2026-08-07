@@ -10,7 +10,7 @@ export default {
     icon: './assets/AppIcons/playstore.png',
     userInterfaceStyle: 'light',
     // Native splash is black-only (Android forces a circle — we hide it).
-    // Brand text splash is LoadingScreen (no multi-MB bitmap).
+    // Branded splash is LoadingScreen via splash-blank.jpg (light JPEG).
     splash: {
       image: './assets/splash-blank.png',
       resizeMode: 'contain',

@@ -10,7 +10,6 @@ import { navigateRoot, replaceRoot } from '../navigation/rootNavigation';
 import { getSettings, saveSettings } from '../utils/settingsStorage';
 import { getStoredUser, clearUser } from '../utils/storage';
 import { usePermissions } from '../hooks/usePermissions';
-import AppSwitch from '../components/AppSwitch';
 
 const DELAYS = [0, 50, 100];
 
@@ -43,7 +42,6 @@ function SettingRow({ icon, title, sub, subColor, onPress, right, separator = tr
 
 export default function SettingsScreen({ navigation }) {
   const { status: permStatus } = usePermissions();
-  const [notifications, setNotifications] = useState(true);
   const [delay, setDelay] = useState(0);
   const [phone, setPhone] = useState('');
 
@@ -104,16 +102,6 @@ export default function SettingsScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-
-        <SectionLabel>Notifications</SectionLabel>
-        <View style={styles.group}>
-          <SettingRow
-            icon={<Ionicons name="notifications-outline" size={18} color={colors.purpleBright} />} title="Ride Accepted Alerts"
-            sub="Show notification when auto-tap fires"
-            separator={false}
-            right={<AppSwitch value={notifications} onValueChange={setNotifications} />}
-          />
         </View>
 
         <SectionLabel>Permissions</SectionLabel>

@@ -21,19 +21,21 @@ const JAVA_FILES = [
 
 const ACCESSIBILITY_XML = `<?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged|typeNotificationStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="true"
-    android:notificationTimeout="0"
+    android:notificationTimeout="50"
     android:description="@string/accessibility_service_description" />
 `;
 
-// MSG91 invisible OTP / Silent Network Auth uses carrier HTTP endpoints (e.g. Jio).
+// MSG91 Invisible OTP / Silent Network Auth hits carrier HTTP endpoints
+// (Jio, Airtel, Vi, etc.). Release builds block cleartext unless permitted —
+// MSG91 docs require base cleartext for invisible OTP to work on all carriers.
 const NETWORK_SECURITY_CONFIG_XML = `<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
@@ -44,22 +46,23 @@ const NETWORK_SECURITY_CONFIG_XML = `<?xml version="1.0" encoding="utf-8"?>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">partnerapi.jio.com</domain>
         <domain includeSubdomains="true">jio.com</domain>
+        <domain includeSubdomains="true">airtel.in</domain>
+        <domain includeSubdomains="true">vodafoneidea.com</domain>
+        <domain includeSubdomains="true">myvi.in</domain>
         <domain includeSubdomains="true">control.msg91.com</domain>
         <domain includeSubdomains="true">msg91.com</domain>
         <domain includeSubdomains="true">80.in.safr.sekuramobile.com</domain>
         <domain includeSubdomains="true">safr.sekuramobile.com</domain>
+        <domain includeSubdomains="true">api.msg91.com</domain>
     </domain-config>
 </network-security-config>
 `;
 
 const ABI_SPLITS_BLOCK = `
-    // Phone ABIs only — cut ~2–3× fat-APK size (no x86 emulator libs in release)
+    // Single universal phone APK (arm32 + arm64). No per-ABI split outputs.
     splits {
         abi {
-            enable true
-            reset()
-            include "armeabi-v7a", "arm64-v8a"
-            universalApk false
+            enable false
         }
     }
 `;
@@ -111,7 +114,9 @@ function copyNativeSources(projectRoot, platformRoot) {
   const xmlPath = path.join(xmlDir, 'accessibility_service_config.xml');
   fs.writeFileSync(xmlPath, ACCESSIBILITY_XML);
   const xml = fs.readFileSync(xmlPath, 'utf8');
-  if (!xml.includes('canPerformGestures="true"') || !xml.includes('notificationTimeout="0"')) {
+  if (!xml.includes('canPerformGestures="true"')
+      || !xml.includes('notificationTimeout="50"')
+      || xml.includes('typeAllMask')) {
     throw new Error('[withAutoClicker] accessibility_service_config.xml missing required flags');
   }
 
@@ -227,6 +232,8 @@ function withAutoClickerManifest(config) {
     }
 
     app.$['android:networkSecurityConfig'] = '@xml/network_security_config';
+    // Required for MSG91 invisible OTP on carriers that use cleartext HTTP
+    app.$['android:usesCleartextTraffic'] = 'true';
 
     return mod;
   });
@@ -436,12 +443,26 @@ function patchReleaseSize(platformRoot) {
     .replace(/\n\s*implementation\("dev\.rikka\.shizuku:api:[^"]+"\)/g, '')
     .replace(/\n\s*implementation\("dev\.rikka\.shizuku:provider:[^"]+"\)/g, '');
 
-  if (!contents.includes('include "armeabi-v7a", "arm64-v8a"')) {
+  // Remove any previously injected ABI split block (old dual-APK setup)
+  contents = contents.replace(
+    /\n\s*\/\/ Phone ABIs only[\s\S]*?splits\s*\{\s*abi\s*\{[\s\S]*?\}\s*\}\s*/g,
+    '\n'
+  );
+  contents = contents.replace(
+    /\n\s*\/\/ Single universal phone APK[\s\S]*?splits\s*\{\s*abi\s*\{[\s\S]*?\}\s*\}\s*/g,
+    '\n'
+  );
+  contents = contents.replace(
+    /\n\s*splits\s*\{\s*abi\s*\{[^}]*enable\s+true[^}]*\}\s*\}\s*/g,
+    '\n'
+  );
+
+  if (!contents.includes('Single universal phone APK')) {
     contents = contents.replace(
       /android\s*\{/,
       (m) => `${m}\n${ABI_SPLITS_BLOCK}`
     );
-    console.log('[withAutoClicker] app/build.gradle: ABI splits enabled');
+    console.log('[withAutoClicker] app/build.gradle: single universal APK (ABI splits off)');
   }
 
   fs.writeFileSync(gradlePath, contents);

@@ -71,10 +71,7 @@ export default function PrivacyPolicyScreen({ navigation }) {
             accounts.{"\n"}
             • Subscription and payment status handled through our payment
             provider.{"\n"}
-            • App preferences you set (for example, minimum fare or response
-            delay).{"\n"}
-            • Local ride-acceptance history stored on your device for your own
-            reference.
+            • App preferences you set (for example, response delay).
           </P>
           <P>
             Accessibility Service access is used only to detect and activate the
@@ -95,8 +92,8 @@ export default function PrivacyPolicyScreen({ navigation }) {
         <Section title="4. Storage and Security">
           <P>
             Account and subscription data may be stored on secure cloud services
-            operated by us or our processors. Local preferences and history may
-            remain on your device. We apply reasonable technical and
+            operated by us or our processors. Local preferences may remain on
+            your device. We apply reasonable technical and
             organisational measures to protect information under our control.
             No method of transmission or storage is completely secure, and we
             cannot guarantee absolute security.
@@ -116,8 +113,8 @@ export default function PrivacyPolicyScreen({ navigation }) {
           <P>
             You may revoke Accessibility Service, overlay, notification, and
             related permissions at any time in Android Settings. You may also
-            log out, clear local history in the App, or contact us to request
-            account-related assistance where applicable.
+            log out, or contact us to request account-related assistance where
+            applicable.
           </P>
         </Section>
 

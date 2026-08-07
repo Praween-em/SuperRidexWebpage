@@ -16,10 +16,18 @@ cd android
 ./gradlew assembleRelease
 ```
 
-Install the phone ABI APK from:
+Install the universal release APK from:
 
-`android/app/build/outputs/apk/release/app-arm64-v8a-release.apk`  
-(or `app-armeabi-v7a-release.apk` on older 32-bit phones)
+`android/app/build/outputs/apk/release/app-release.apk`
+
+(One APK for both 32-bit and 64-bit phones — no separate arm64 / armeabi builds.)
+
+### Device profile (Accept race)
+
+- **Stock** (Pixel / Motorola / Nothing / Fairphone): shorter taps, faster polls
+- **Everyone else** (Xiaomi, Vivo, Oppo, Realme, Samsung, Tecno, unknown…): longer taps (~72ms), slower polls — keeps Accessibility alive and registers presses on skinned OEMs
+
+After install: Accessibility ON + Notification access ON + Battery unrestricted + Autostart (OEM).
 
 ## Enable auto-accept
 
