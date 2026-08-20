@@ -1,24 +1,26 @@
 /* SUPER RIDEX — mobile-first brand system */
 :root {
   --bg: #000000;
-  --bg-deep: #000814;
-  --bg-elevated: #06101f;
-  --bg-soft: #0a1628;
-  --cyan: #00d2ff;
-  --cyan-bright: #5cefff;
-  --blue: #0072ff;
-  --blue-deep: #0047cc;
-  --silver: #e8eef5;
-  --silver-muted: #9aadc2;
-  --text: #f2f7fc;
-  --text-dim: #a8bcd0;
-  --border: rgba(0, 210, 255, 0.18);
-  --gold: #f5c542;
-  --gold-bright: #ffe08a;
-  --glow: 0 0 28px rgba(0, 210, 255, 0.45);
-  --glow-soft: 0 0 40px rgba(0, 114, 255, 0.25);
-  --glow-gold: 0 0 28px rgba(245, 197, 66, 0.4);
-  --radius: 14px;
+  --bg-deep: #0a0700;
+  --bg-elevated: #161000;
+  --bg-soft: #1c1405;
+  --gold: #ffcc00;
+  --gold-bright: #ffe566;
+  --gold-deep: #c98900;
+  --amber: #ff8a00;
+  --cyan: #ffcc00;
+  --cyan-bright: #ffe566;
+  --blue: #ff8a00;
+  --blue-deep: #c96a00;
+  --silver: #f4f4f4;
+  --silver-muted: #b8b0a0;
+  --text: #fffaf0;
+  --text-dim: #cfc6b4;
+  --border: rgba(255, 204, 0, 0.22);
+  --glow: 0 0 28px rgba(255, 204, 0, 0.45);
+  --glow-soft: 0 0 40px rgba(255, 138, 0, 0.28);
+  --glow-gold: 0 0 28px rgba(255, 204, 0, 0.5);
+  --radius: 10px;
   --nav-h: 64px;
   --pad: clamp(1rem, 4vw, 1.5rem);
   --max: 1080px;
@@ -109,7 +111,7 @@ button,
 
 .site-header.is-scrolled {
   border-bottom-color: var(--border);
-  background: rgba(0, 8, 20, 0.92);
+  background: rgba(10, 7, 0, 0.92);
 }
 
 .nav-inner {
@@ -149,7 +151,7 @@ button,
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background: linear-gradient(180deg, #9fdfff 0%, var(--cyan) 45%, var(--blue) 100%);
+  background: linear-gradient(180deg, #fff4c2 0%, var(--gold) 45%, var(--amber) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -179,7 +181,7 @@ button,
   top: var(--nav-h);
   left: 0;
   right: 0;
-  background: rgba(0, 8, 20, 0.98);
+  background: rgba(10, 7, 0, 0.98);
   border-bottom: 1px solid var(--border);
   padding: 0.75rem var(--pad) 1.25rem;
   flex-direction: column;
@@ -204,7 +206,7 @@ button,
 .nav-links a:hover,
 .nav-links a[aria-current="page"] {
   color: var(--cyan);
-  background: rgba(0, 210, 255, 0.06);
+  background: rgba(255, 204, 0, 0.06);
 }
 
 .nav-cta {
@@ -269,25 +271,25 @@ button,
 }
 
 .btn-primary {
-  color: #001018;
-  background: linear-gradient(135deg, var(--blue) 0%, var(--cyan) 100%);
+  color: #1a1200;
+  background: linear-gradient(135deg, var(--amber) 0%, var(--gold) 55%, var(--gold-bright) 100%);
   box-shadow: var(--glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .btn-primary:hover {
-  color: #001018;
-  box-shadow: 0 0 36px rgba(0, 210, 255, 0.65), var(--glow-soft);
+  color: #1a1200;
+  box-shadow: 0 0 36px rgba(255, 204, 0, 0.7), var(--glow-soft);
 }
 
 .btn-ghost {
   color: var(--cyan);
-  background: rgba(0, 210, 255, 0.06);
+  background: rgba(255, 204, 0, 0.06);
   border: 1px solid var(--border);
 }
 
 .btn-ghost:hover {
   color: var(--cyan-bright);
-  background: rgba(0, 210, 255, 0.12);
+  background: rgba(255, 204, 0, 0.12);
 }
 
 .btn-pro {
@@ -328,7 +330,7 @@ button,
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 42%;
+  object-position: center 12%;
   animation: heroZoom 18s ease-in-out infinite alternate;
 }
 
@@ -337,8 +339,7 @@ button,
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 8, 20, 0.25) 35%, rgba(0, 0, 0, 0.92) 78%, #000 100%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.55) 0%, transparent 50%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.05) 22%, rgba(0, 0, 0, 0.2) 52%, rgba(0, 0, 0, 0.82) 78%, #000 100%);
 }
 
 .hero-content {
@@ -351,7 +352,7 @@ button,
 .hero-brand {
   width: min(100%, 320px);
   margin-bottom: 1.1rem;
-  filter: drop-shadow(0 0 24px rgba(0, 210, 255, 0.35));
+  filter: drop-shadow(0 0 24px rgba(255, 204, 0, 0.35));
 }
 
 .hero h1 {
@@ -362,6 +363,7 @@ button,
   letter-spacing: 0.02em;
   color: var(--silver);
   margin-bottom: 0.75rem;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85), 0 0 24px rgba(255, 204, 0, 0.25);
 }
 
 .hero-lead {
@@ -369,6 +371,7 @@ button,
   font-size: clamp(0.95rem, 3.2vw, 1.05rem);
   max-width: 28rem;
   margin-bottom: 1.5rem;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
 }
 
 .hero-actions {
@@ -386,16 +389,16 @@ button,
 
 @media (min-width: 860px) {
   .hero {
-    justify-content: center;
-    padding-bottom: 4rem;
+    justify-content: flex-end;
+    padding-bottom: 4.5rem;
   }
 
   .hero-content {
     max-width: 38rem;
   }
 
-  .hero-brand {
-    width: 380px;
+  .hero-media img {
+    object-position: center top;
   }
 }
 
@@ -425,7 +428,7 @@ button,
   letter-spacing: 0.02em;
   line-height: 1.3;
   margin-bottom: 0.85rem;
-  background: linear-gradient(180deg, #fff 0%, #b8d4ee 100%);
+  background: linear-gradient(180deg, #fff 0%, #ffd36a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -466,7 +469,7 @@ button,
   height: 40px;
   margin-bottom: 0.9rem;
   color: var(--cyan);
-  filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5));
+  filter: drop-shadow(0 0 10px rgba(255, 204, 0, 0.5));
 }
 
 .feature h3 {
@@ -512,7 +515,7 @@ button,
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--cyan);
-  text-shadow: 0 0 16px rgba(0, 210, 255, 0.55);
+  text-shadow: 0 0 16px rgba(255, 204, 0, 0.55);
 }
 
 .step h3 {
@@ -542,8 +545,8 @@ button,
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0, 114, 255, 0.22), transparent 70%),
-    linear-gradient(180deg, #000814, #000);
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255, 138, 0, 0.28), transparent 70%),
+    linear-gradient(180deg, #0a0700, #000);
   animation: pulseGlow 5s ease-in-out infinite alternate;
 }
 
@@ -565,7 +568,7 @@ button,
 .page-hero {
   padding: calc(var(--nav-h) + 2.5rem) var(--pad) 2.5rem;
   background:
-    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(0, 114, 255, 0.2), transparent 55%),
+    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(255, 204, 0, 0.18), transparent 55%),
     linear-gradient(180deg, var(--bg-deep), var(--bg));
   border-bottom: 1px solid var(--border);
 }
@@ -581,7 +584,7 @@ button,
   font-size: clamp(1.6rem, 5vw, 2.25rem);
   letter-spacing: 0.04em;
   margin-bottom: 0.65rem;
-  background: linear-gradient(180deg, #fff, #7ec8ff);
+  background: linear-gradient(180deg, #fff, #ffd36a);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -702,14 +705,14 @@ button,
   padding: 1rem 1.15rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: linear-gradient(135deg, rgba(0, 210, 255, 0.05), rgba(0, 114, 255, 0.03));
+  background: linear-gradient(135deg, rgba(255, 204, 0, 0.05), rgba(255, 138, 0, 0.04));
   color: var(--text);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .contact-link:hover {
   color: var(--text);
-  border-color: rgba(0, 210, 255, 0.45);
+  border-color: rgba(255, 204, 0, 0.45);
   box-shadow: var(--glow-soft);
   transform: translateY(-2px);
 }
@@ -770,8 +773,8 @@ body.modal-open {
   border: 1px solid var(--border);
   background:
     radial-gradient(ellipse 80% 50% at 80% 0%, rgba(245, 197, 66, 0.12), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(0, 210, 255, 0.12), transparent 50%),
-    linear-gradient(180deg, #081221, #000814 60%, #000);
+    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(255, 204, 0, 0.12), transparent 50%),
+    linear-gradient(180deg, #161000, #0a0700 60%, #000);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45), var(--glow-soft);
 }
 
@@ -806,7 +809,7 @@ body.modal-open {
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: rgba(0, 210, 255, 0.06);
+  background: rgba(255, 204, 0, 0.06);
   border: 1px solid var(--border);
   color: var(--cyan);
 }
@@ -818,7 +821,7 @@ body.modal-open {
 
 .download-close:hover {
   color: var(--cyan-bright);
-  background: rgba(0, 210, 255, 0.12);
+  background: rgba(255, 204, 0, 0.12);
 }
 
 .download-options {
@@ -831,12 +834,12 @@ body.modal-open {
   padding: 1.1rem 1rem 1rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(0, 210, 255, 0.06), rgba(0, 114, 255, 0.03));
+  background: linear-gradient(180deg, rgba(255, 204, 0, 0.06), rgba(255, 138, 0, 0.04));
 }
 
 .download-card.is-pro {
-  border-color: rgba(245, 197, 66, 0.4);
-  background: linear-gradient(180deg, rgba(245, 197, 66, 0.1), rgba(0, 114, 255, 0.04));
+  border-color: rgba(255, 204, 0, 0.45);
+  background: linear-gradient(180deg, rgba(255, 204, 0, 0.12), rgba(255, 138, 0, 0.05));
 }
 
 .download-card h3 {
