@@ -1,5 +1,6 @@
-Place the Android APK in this folder as:
+Place the Android APKs in this folder as:
 
-  superridex.apk
+  superridex.apk       — SUPER RIDEX (Standard)
+  superridex-pro.apk   — SUPER RIDEX PRO
 
-All Download buttons on the site link to downloads/superridex.apk
+Download buttons on the site open a picker so visitors can choose Standard or Pro.

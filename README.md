@@ -12,7 +12,7 @@ Static marketing site for **SUPER RIDEX** — ready for GitHub Pages + a custom 
 
 ## Before you publish
 
-1. **Put your APK here:** copy the Android build to `downloads/superridex.apk` (all Download buttons point to this file).
+1. **Put your APKs here:** copy the Standard build to `downloads/superridex.apk` and the Pro build to `downloads/superridex-pro.apk`. Download buttons open a picker so visitors can choose either edition.
 2. **Custom domain:** edit `CNAME` to your real domain (e.g. `www.superridex.com` or `superridex.com`).
 3. **SEO URLs:** replace `https://superridex.com` in `index.html`, other pages, `robots.txt`, and `sitemap.xml` if your domain differs.
 4. **Instagram:** Contact uses `https://www.instagram.com/super_ride_x/` to match the YouTube handle — update `contact.html` if your handle is different.

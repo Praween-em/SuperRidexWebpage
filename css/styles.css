@@ -13,8 +13,11 @@
   --text: #f2f7fc;
   --text-dim: #a8bcd0;
   --border: rgba(0, 210, 255, 0.18);
+  --gold: #f5c542;
+  --gold-bright: #ffe08a;
   --glow: 0 0 28px rgba(0, 210, 255, 0.45);
   --glow-soft: 0 0 40px rgba(0, 114, 255, 0.25);
+  --glow-gold: 0 0 28px rgba(245, 197, 66, 0.4);
   --radius: 14px;
   --nav-h: 64px;
   --pad: clamp(1rem, 4vw, 1.5rem);
@@ -285,6 +288,17 @@ button,
 .btn-ghost:hover {
   color: var(--cyan-bright);
   background: rgba(0, 210, 255, 0.12);
+}
+
+.btn-pro {
+  color: #1a1200;
+  background: linear-gradient(135deg, #c99212 0%, var(--gold) 55%, var(--gold-bright) 100%);
+  box-shadow: var(--glow-gold), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn-pro:hover {
+  color: #1a1200;
+  box-shadow: 0 0 36px rgba(245, 197, 66, 0.65), var(--glow-soft);
 }
 
 .btn-block {
@@ -724,6 +738,162 @@ button,
   margin-top: 1rem;
   font-size: 0.85rem;
   color: var(--silver-muted);
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.download-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: end center;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.download-modal[hidden] {
+  display: none;
+}
+
+.download-dialog {
+  position: relative;
+  width: min(100%, 640px);
+  max-height: min(92dvh, 720px);
+  overflow: auto;
+  padding: 1.35rem 1.15rem 1.25rem;
+  border-radius: 18px 18px 12px 12px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(ellipse 80% 50% at 80% 0%, rgba(245, 197, 66, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(0, 210, 255, 0.12), transparent 50%),
+    linear-gradient(180deg, #081221, #000814 60%, #000);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45), var(--glow-soft);
+}
+
+.download-dialog:focus {
+  outline: none;
+}
+
+.download-dialog .section-label {
+  margin-bottom: 0.45rem;
+}
+
+.download-dialog h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 4vw, 1.45rem);
+  letter-spacing: 0.03em;
+  margin-bottom: 0.5rem;
+  color: var(--silver);
+}
+
+.download-dialog-copy {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  margin-bottom: 1.15rem;
+}
+
+.download-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(0, 210, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--cyan);
+}
+
+.download-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.download-close:hover {
+  color: var(--cyan-bright);
+  background: rgba(0, 210, 255, 0.12);
+}
+
+.download-options {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.download-card {
+  position: relative;
+  padding: 1.1rem 1rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0, 210, 255, 0.06), rgba(0, 114, 255, 0.03));
+}
+
+.download-card.is-pro {
+  border-color: rgba(245, 197, 66, 0.4);
+  background: linear-gradient(180deg, rgba(245, 197, 66, 0.1), rgba(0, 114, 255, 0.04));
+}
+
+.download-card h3 {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--silver);
+  margin-bottom: 0.2rem;
+}
+
+.download-card-tag {
+  font-size: 0.78rem;
+  color: var(--cyan);
+  margin-bottom: 0.45rem;
+}
+
+.download-card.is-pro .download-card-tag {
+  color: var(--gold);
+}
+
+.download-card-copy {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin-bottom: 0.95rem;
+}
+
+.download-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0.15rem 0.5rem;
+  margin-bottom: 0.45rem;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1a1200;
+  background: linear-gradient(135deg, #c99212, var(--gold-bright));
+}
+
+@media (min-width: 640px) {
+  .download-modal {
+    place-items: center;
+    padding: 1.5rem;
+  }
+
+  .download-dialog {
+    border-radius: 18px;
+    padding: 1.75rem 1.5rem 1.5rem;
+  }
+
+  .download-options {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
 }
 
 /* Footer */
